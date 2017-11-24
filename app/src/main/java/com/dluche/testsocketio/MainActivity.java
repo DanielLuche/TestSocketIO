@@ -19,11 +19,16 @@ import java.net.URISyntaxException;
 
 import static com.github.nkzawa.emitter.Emitter.Listener;
 
+//import com.github.nkzawa.socketio.client.IO;
+
 public class MainActivity extends AppCompatActivity {
+
     private Socket mSocket;
     private EditText etInput;
     private Button btnAction;
+
     private Listener onNewMessage;
+
     private TextView tv_chat;
 
 
@@ -49,24 +54,24 @@ public class MainActivity extends AppCompatActivity {
         onNewMessage = new Listener() {
             @Override
             public void call(final Object... args) {
-                 runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         Log.d("MySocket", "Chamou listner de recebeu msg websocket");
                         String username = "";
                         String message = "";
                         try {
-                            if(args[0] instanceof JSONObject  ) {
+                            if (args[0] instanceof JSONObject) {
                                 JSONObject data = (JSONObject) args[0];
                                 username = data.getString("username");
                                 message = data.getString("message");
-                            }else if(args[0] instanceof String){
+                            } else if (args[0] instanceof String) {
                                 username = "Anonimo";
                                 message = (String) args[0];
                             }
 
 
-                           // username = data.getString("username");
+                            // username = data.getString("username");
                             //message = data.getString("message");
                         } catch (Exception e) {
                             Log.d("MySocket", "execption no listner: " + e.toString());
@@ -83,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         };
         //
         try {
-            mSocket = IO.socket("https://chat.namoadigital.com");
+            mSocket = IO.socket("https://chatdev.namoadigital.com");
         } catch (URISyntaxException e) {
             Log.d("MySocket", e.toString());
             //
@@ -92,25 +97,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addMessage(String username, String message) {
-        Log.d("MySocket", "addMessage|Add msg de" +  username +" ->" + message);
+        Log.d("MySocket", "addMessage|Add msg de" + username + " ->" + message);
         String chatHistory = tv_chat.getText().toString().trim();
-        chatHistory += '\n' +username+ " disse:\n" + message;
+        chatHistory += '\n' + username + " disse:\n" + message;
         tv_chat.setText(chatHistory);
     }
 
 
     private void iniAction() {
         //                         \/ listner de msg enviada pelo server
-        mSocket.on("chat message", onNewMessage);
+        mSocket.on("message", onNewMessage);
         mSocket.connect();
+        mSocket.emit("room", "sala1");
         //
         btnAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(etInput.getText().toString().trim().length() > 0){
+                if (etInput.getText().toString().trim().length() > 0) {
                     attemptSend();
-                }else{
-                    Toast.makeText(getBaseContext(),"Digite algo",Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getBaseContext(), "Digite algo", Toast.LENGTH_SHORT).show();
                 }
 
             }
@@ -123,9 +129,9 @@ public class MainActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(message)) {
             return;
         }
-        Log.d("MySocket", "attemptSend|Tentou enviar msg : "+ message);
+        Log.d("MySocket", "attemptSend|Tentou enviar msg : " + message);
         etInput.setText("");
-        mSocket.emit("chat message", message);
+        mSocket.emit("message", message);
     }
 
     @Override
@@ -133,10 +139,9 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         mSocket.disconnect();
-        mSocket.off("chat message", onNewMessage);
+        mSocket.off("message", onNewMessage);
         Log.d("MySocket", "Finalizou o chat");
     }
-
 
 
 }
