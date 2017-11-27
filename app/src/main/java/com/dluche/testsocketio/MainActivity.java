@@ -1,5 +1,6 @@
 package com.dluche.testsocketio;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -10,16 +11,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.github.nkzawa.socketio.client.IO;
-import com.github.nkzawa.socketio.client.Socket;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
-import org.json.JSONObject;
-
-import java.net.URISyntaxException;
-
-import static com.github.nkzawa.emitter.Emitter.Listener;
-
-//import com.github.nkzawa.socketio.client.IO;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,9 +21,11 @@ public class MainActivity extends AppCompatActivity {
     private EditText etInput;
     private Button btnAction;
 
-    private Listener onNewMessage;
+    private Emitter.Listener onNewMessage;
 
     private TextView tv_chat;
+
+    private SingletonWebSocket singletonWebSocket = SingletonWebSocket.getInstance();
 
 
     @Override
@@ -51,49 +47,91 @@ public class MainActivity extends AppCompatActivity {
         //
         tv_chat = (TextView) findViewById(R.id.main_tv_chat);
         //
-        onNewMessage = new Listener() {
+        singletonWebSocket.setOnISWS(new SingletonWebSocket.ISingletonWebSocket() {
             @Override
-            public void call(final Object... args) {
+            public void chat(final String user, final String message) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Log.d("MySocket", "Chamou listner de recebeu msg websocket");
-                        String username = "";
-                        String message = "";
-                        try {
-                            if (args[0] instanceof JSONObject) {
-                                JSONObject data = (JSONObject) args[0];
-                                username = data.getString("username");
-                                message = data.getString("message");
-                            } else if (args[0] instanceof String) {
-                                username = "Anonimo";
-                                message = (String) args[0];
-                            }
-
-
-                            // username = data.getString("username");
-                            //message = data.getString("message");
-                        } catch (Exception e) {
-                            Log.d("MySocket", "execption no listner: " + e.toString());
-                            return;
-                        }
-
-                        // add the message to view
-                        addMessage(username, message);
+                        addMessage(user, message);
                     }
                 });
-
             }
+        });
 
-        };
         //
-        try {
-            mSocket = IO.socket("https://chatdev.namoadigital.com");
-        } catch (URISyntaxException e) {
-            Log.d("MySocket", e.toString());
-            //
-            e.printStackTrace();
-        }
+//        onNewMessage = new Emitter.Listener() {
+//            @Override
+//            public void call(final Object... args) {
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Log.d("MySocket", "Chamou listner de recebeu msg websocket");
+//                        String username = "";
+//                        String message = "";
+//                        try {
+//                            if (args[0] instanceof JSONObject) {
+//                                JSONObject data = (JSONObject) args[0];
+//                                username = data.getString("username");
+//                                message = data.getString("message");
+//                            } else if (args[0] instanceof String) {
+//                                username = "Anonimo";
+//                                message = (String) args[0];
+//                            }
+//
+//
+//                            // username = data.getString("username");
+//                            //message = data.getString("message");
+//                        } catch (Exception e) {
+//                            Log.d("MySocket", "execption no listner: " + e.toString());
+//                            return;
+//                        }
+//
+//                        // add the message to view
+//                        addMessage(username, message);
+//                    }
+//                });
+//
+//            }
+//        };
+//        //
+//        try {
+//
+//            IO.Options options = new IO.Options();
+//            options.reconnectionDelay = 0;
+//            options.reconnectionAttempts = 1000;
+//            //options.reconnection = true;
+//
+//            mSocket = IO.socket("https://chatdev.namoadigital.com", options);
+//
+//            mSocket.on(Socket.EVENT_RECONNECT, new Emitter.Listener() {
+//                @Override
+//                public void call(Object... args) {
+//                    Log.d("TT", "reconnect");
+//                }
+//            });
+//
+//
+//            mSocket.on(Socket.EVENT_CONNECT_TIMEOUT, new Emitter.Listener() {
+//                @Override
+//                public void call(Object... args) {
+//                    Log.d("TT", "timeout");
+//                }
+//            });
+//
+//            mSocket.on(Socket.EVENT_DISCONNECT, new Emitter.Listener() {
+//                @Override
+//                public void call(Object... args) {
+//                    Log.d("TT", "DISCONNECT");
+//                }
+//            });
+//
+//        } catch (URISyntaxException e) {
+//            Log.d("MySocket", e.toString());
+//            //
+//            e.printStackTrace();
+//        }
+
     }
 
     private void addMessage(String username, String message) {
@@ -105,24 +143,35 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void iniAction() {
-        //                         \/ listner de msg enviada pelo server
-        mSocket.on("message", onNewMessage);
-        mSocket.connect();
-        mSocket.emit("room", "sala1");
-        //
+
+        Intent mIntent = new Intent(getBaseContext(), AppBackgroundService.class);
+        startService(mIntent);
+
+        //        //                         \/ listner de msg enviada pelo server
+//        mSocket.on("switchRoom", onNewMessage);
+//        mSocket.on("message", onNewMessage);
+//        mSocket.connect();
+//
+//        mSocket.emit("room", "sala1");
+//        //
         btnAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (etInput.getText().toString().trim().length() > 0) {
-                    attemptSend();
+                    singletonWebSocket.attemptSend(etInput.getText().toString().trim());
                 } else {
                     Toast.makeText(getBaseContext(), "Digite algo", Toast.LENGTH_SHORT).show();
                 }
-
             }
+//                if (etInput.getText().toString().trim().length() > 0) {
+//                    attemptSend();
+//                } else {
+//                    Toast.makeText(getBaseContext(), "Digite algo", Toast.LENGTH_SHORT).show();
+//                }
+//
+//            }
         });
     }
-
 
     private void attemptSend() {
         String message = etInput.getText().toString().trim();
@@ -137,10 +186,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
-        mSocket.disconnect();
-        mSocket.off("message", onNewMessage);
-        Log.d("MySocket", "Finalizou o chat");
     }
 
 
